@@ -22,20 +22,6 @@ class Program : public Node {
 class Funcs : public Node {
 };
 
-class FuncDecl : public Node {
-};
-
-class RetType : public Node {
-};
-
-class Formals : public Node {
-};
-
-class FormalsList : public Node {
-};
-
-class FormalDecl : public Node {
-};
 
 
 
@@ -46,10 +32,46 @@ public:
     Type(const string type);
 };
 
+class RetType : public Node {
+public:
+    string type;
+    RetType(const string type);
+};
+
+class FormalDecl : public Node {
+public:
+    string type;
+    FormalDecl(Type* type, Node* node);
+};
+
+class FormalsList : public Node {
+public:
+    vector<FormalDecl*> formals_list;
+    FormalsList(Node* node);
+    FormalsList(Node* node, FormalsList* formals_list);
+};
+
+class Formals : public Node {
+public:
+    vector<FormalDecl*> formals_list;
+    Formals();
+    Formals(FormalsList* formals_list);
+};
+
+
+
+class FuncDecl : public Node {
+public:
+    FuncDecl(RetType* return_type, Node* id, Formals* params);
+};
+
+
 class Exp : public Node {
 public:
     string type;
     string value;
+
+    Exp():type("void"),value(""){}
 
     Exp(Node *terminal, string type);
 
@@ -83,6 +105,8 @@ public:
 
 class Statement : public Node {
 public:
+    Statement(Node* node);
+
     Statement(Type *type, Node *id);
 
     Statement(Type *type, Node *id, Exp *exp);
@@ -91,12 +115,15 @@ public:
 
     Statement(Exp *exp, const string name);
 
+    Statement(Exp* exp);
+
     Statement(Call *call);
 };
 
 class Statements : public Node {
+public:
     Statements(Statement* statement): Node(){};
-    Statements(Statements statements,Statement* statement): Node(){};
+    Statements(Statements* statements,Statement* statement): Node(){};
 };
 #define YYSTYPE Node*
 #endif

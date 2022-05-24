@@ -1,6 +1,7 @@
 #include "symbol_table.h"
 #include "hw3_output.hpp"
-TableStack tables();
+
+
 
 void SymbolTable::add_symbol(const Symbol &symbol) {
     this->symbols.push_back(symbol);
@@ -26,6 +27,10 @@ Symbol *SymbolTable::get_symbol(const string &name) {
 
 //**************TABLESTACK*************************
 
+TableStack::TableStack(): table_stack(), offsets() {
+    push_scope(false);
+}
+
 bool TableStack::symbol_exists(const string &name) {
     for(auto it = table_stack.begin(); it != table_stack.end(); ++it){
         if((*it).symbol_exists(name))
@@ -40,19 +45,30 @@ Symbol *TableStack::get_symbol(const string &name) {
         if(symbol)
             return symbol;
     }
+    return nullptr;
 }
 
-void TableStack::add_symbol(const string &name, const string &type, bool is_function) {
+void TableStack::add_symbol(const string &name, const string &type, bool is_function, vector<string> params)  {
     SymbolTable current_scope = table_stack.back();
     int offset = offsets.back() + 1;
     offsets.push_back(offset);
-    Symbol symbol = Symbol(name, type, offset, is_function);
+    Symbol symbol = Symbol(name, type, offset, is_function, params);
     current_scope.add_symbol(symbol);
 }
 
-void TableStack::push_scope() {
-    table_stack.push_back(SymbolTable(offsets.back()));
+void TableStack::add_function_symbol(const string &name, const string &type, int offset) {
+    SymbolTable current_scope = table_stack.back();
+    Symbol symbol = Symbol(name, type, offset, false, vector<string>());
+    current_scope.add_symbol(symbol);
+}
+
+void TableStack::push_scope(bool is_loop, string return_type) {
+    table_stack.push_back(SymbolTable(offsets.back(), is_loop, return_type));
     offsets.push_back(table_stack.back().max_offset);
+}
+
+SymbolTable *TableStack::current_scope() {
+    return &table_stack.back();
 }
 
 void TableStack::pop_scope() {
