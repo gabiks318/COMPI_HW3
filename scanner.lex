@@ -1,46 +1,49 @@
 %{
+    #include "types.h"
     #include "hw3_output.hpp"
     #include "parser.tab.hpp"
+
 %}
 
 %option yylineno
 %option noyywrap
+
 digit            ([0-9])
 letter           ([a-zA-Z])
 letterdigit      ([a-zA-Z0-9])
 whitespace       ([\t\n\r ])
 
 %%
-void                                                                                return VOID;
-int                                                                                 return INT;
-byte                                                                                return BYTE;
-b                                                                                   return B;
-bool                                                                                return BOOL;
-auto                                                                                return AUTO;
-and                                                                                 return AND;
-or                                                                                  return OR;
-not                                                                                 return NOT;
-true                                                                                return TRUE;
-false                                                                               return FALSE;
-return                                                                              return RETURN;
-if                                                                                  return IF;
-else                                                                                return ELSE;
-while                                                                               return WHILE;
-break                                                                               return BREAK;
-continue                                                                            return CONTINUE;
-;                                                                                   return SC;
-,                                                                                   return COMMA;
-\(                                                                                  return LPAREN;
-\)                                                                                  return RPAREN;
-\{                                                                                  return LBRACE;
-\}                                                                                  return RBRACE;
-=                                                                                   return ASSIGN;
-==|!=|<|>|<=|>=                                                                     return RELOP;
-\+|\-                                                                               return ADD_SUB;
-\*|\/                                                                               return MULT_DIV;
-{letter}{letterdigit}*                                                              return ID;
-([1-9]+{digit}*)|0                                                                  return NUM;
-\"([^\n\r\"\\]|\\[rnt"\\])+\"                                                       return STRING;
+void                                          yylval=new Node(yytext);return VOID;
+int                                           yylval=new Node(yytext);                                      return INT;
+byte                                          yylval=new Node(yytext);                                      return BYTE;
+b                                             yylval=new Node(yytext);                                      return B;
+bool                                          yylval=new Node(yytext);                                      return BOOL;
+auto                                          yylval=new Node(yytext);                                      return AUTO;
+and                                           yylval=new Node(yytext);                                      return AND;
+or                                            yylval=new Node(yytext);                                      return OR;
+not                                           yylval=new Node(yytext);                                      return NOT;
+true                                          yylval=new Node(yytext);                                      return TRUE;
+false                                         yylval=new Node(yytext);                                      return FALSE;
+return                                        yylval=new Node(yytext);                                      return RETURN;
+if                                            yylval=new Node(yytext);                                      return IF;
+else                                          yylval=new Node(yytext);                                      return ELSE;
+while                                         yylval=new Node(yytext);                                      return WHILE;
+break                                         yylval=new Node(yytext);                                      return BREAK;
+continue                                      yylval=new Node(yytext);                                      return CONTINUE;
+;                                             yylval=new Node(yytext);                                      return SC;
+,                                             yylval=new Node(yytext);                                      return COMMA;
+\(                                            yylval=new Node(yytext);                                      return LPAREN;
+\)                                            yylval=new Node(yytext);                                      return RPAREN;
+\{                                            yylval=new Node(yytext);                                      return LBRACE;
+\}                                            yylval=new Node(yytext);                                      return RBRACE;
+=                                             yylval=new Node(yytext);                                     return ASSIGN;
+==|!=|<|>|<=|>=                               yylval=new Node(yytext);                                      return RELOP;
+\+|\-                                         yylval=new Node(yytext);                                      return ADD_SUB;
+\*|\/                                         yylval=new Node(yytext);                                      return MULT_DIV;
+{letter}{letterdigit}*                        yylval=new Node(yytext);                                      return ID;
+([1-9]+{digit}*)|0                            yylval=new Node(yytext);                                      return NUM;
+\"([^\n\r\"\\]|\\[rnt"\\])+\"                 yylval=new Node(yytext);                                      return STRING;
 \/\/[^\n\r]*[\r|\n|\r\n]?                                                           ;
 {whitespace}                                                                        ;
 .                                                                                   {output::errorLex(yylineno); exit(0);}

@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 using std::string;
 using std::vector;
@@ -11,8 +12,8 @@ class Node {
 public:
     string value;
 
-    explicit Node(const string value = "") : value(value) {};
-
+    Node(const string value = "") : value(value) {};
+    Node(const Node &node): value(node.value){};
     virtual ~Node() = default;
 };
 
@@ -20,9 +21,8 @@ class Program : public Node {
 };
 
 class Funcs : public Node {
+    virtual ~Funcs() = default;
 };
-
-
 
 
 class Type : public Node {
@@ -30,39 +30,64 @@ public:
     string type;
 
     Type(const string type);
+
+    virtual ~Type() = default;
 };
 
 class RetType : public Node {
 public:
     string type;
+
     RetType(const string type);
+
+    virtual ~RetType() = default;
 };
 
 class FormalDecl : public Node {
 public:
     string type;
-    FormalDecl(Type* type, Node* node);
+
+    FormalDecl(Type *type, Node *node);
+    FormalDecl(FormalDecl* formal);
+
+    virtual ~FormalDecl(){
+    };
 };
 
 class FormalsList : public Node {
 public:
-    vector<FormalDecl*> formals_list;
-    FormalsList(Node* node);
-    FormalsList(Node* node, FormalsList* formals_list);
+    vector<FormalDecl *> formals_list;
+
+    FormalsList(Node *node);
+
+    FormalsList(Node *node, FormalsList *formals_list);
+
+    virtual ~FormalsList() {
+        for (auto it = formals_list.begin(); it != formals_list.end(); it++)
+            delete[] (*it);
+    }
 };
 
 class Formals : public Node {
 public:
-    vector<FormalDecl*> formals_list;
-    Formals();
-    Formals(FormalsList* formals_list);
-};
+    vector<FormalDecl *> formals_list;
 
+    Formals();
+
+    Formals(FormalsList *formals_list);
+
+    virtual ~Formals() {
+        for (auto it = formals_list.begin(); it != formals_list.end(); it++)
+            delete[] (*it);
+    }
+};
 
 
 class FuncDecl : public Node {
 public:
-    FuncDecl(RetType* return_type, Node* id, Formals* params);
+    FuncDecl(RetType *return_type, Node *id, Formals *params);
+
+    virtual ~FuncDecl() = default;
 };
 
 
@@ -70,18 +95,21 @@ class Exp : public Node {
 public:
     string type;
     string value;
+    bool is_var=false;
 
-    Exp():type("void"),value(""){}
+    Exp() : type("void"), value("") {}
 
     Exp(Node *terminal, string type);
 
     Exp(Node *terminal1, Node *terminal2, const string op, const string type);
 
-    Exp(Node *terminal);
+    Exp(bool is_var, Node *terminal);
 
     Exp(Node *exp, Node *type);
 
     Exp(Exp *exp);
+
+    virtual ~Exp() = default;
 };
 
 class ExpList : public Node {
@@ -91,6 +119,11 @@ public:
     ExpList(Node *exp);
 
     ExpList(Node *exp_list, Node *exp);
+
+    virtual ~ExpList() {
+        for (auto it = expressions.begin(); it != expressions.end(); it++)
+            delete[] &(*it);
+    }
 };
 
 
@@ -101,11 +134,13 @@ public:
     Call(Node *terminal);
 
     Call(Node *terminal, Node *exp_list);
+
+    virtual ~Call() = default;
 };
 
 class Statement : public Node {
 public:
-    Statement(Node* node);
+    Statement(Node *node);
 
     Statement(Type *type, Node *id);
 
@@ -115,15 +150,20 @@ public:
 
     Statement(Exp *exp, const string name);
 
-    Statement(Exp* exp);
+    Statement(Exp *exp, bool is_return=false);
 
     Statement(Call *call);
+
+    virtual ~Statement() = default;
 };
 
 class Statements : public Node {
 public:
-    Statements(Statement* statement): Node(){};
-    Statements(Statements* statements,Statement* statement): Node(){};
+    Statements(Statement *statement) : Node() {};
+
+    Statements(Statements *statements, Statement *statement) : Node() {};
+
+    virtual ~Statements() = default;
 };
 #define YYSTYPE Node*
 #endif
