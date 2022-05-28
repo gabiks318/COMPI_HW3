@@ -1,0 +1,33 @@
+void foo(int a, byte v,bool d){
+    int num1;
+    {
+        int num2;
+        bool asd;
+    }
+    int num2;
+    while (true){
+        int num3;
+        int num4;
+        int num5;
+    }
+    int num4;
+}
+
+void foo2(int a, byte v,bool d){
+    int num1;
+    {
+        int num2;
+        bool asd;
+    }
+    int num2;
+    while (true){
+        int num3;
+        int num4;
+        int num5;
+    }
+    int num4;
+}
+
+void main(){
+    return;
+}

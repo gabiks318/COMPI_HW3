@@ -12,12 +12,15 @@ void SymbolTable::add_symbol(const Symbol &symbol) {
 
 
 bool SymbolTable::symbol_exists(const string &name) {
-    for (auto it = symbols.rbegin(); it != symbols.rend(); ++it) {
-        if ((*it)->name == name)
+//    std::cout << "Checking scope of size " << symbols.size() << "\n";
+    for(int i = 0; i < symbols.size(); i++){
+//        std::cout << "iteration " << i << " Symbol is:" << symbols[i]->name << "\n";
+        if (symbols[i]->name == name)
             return true;
     }
     return false;
 }
+
 
 Symbol *SymbolTable::get_symbol(const string &name) {
     for (auto it = symbols.begin(); it != symbols.end(); ++it) {
@@ -37,13 +40,23 @@ TableStack::TableStack() : table_stack(), offsets() {
 }
 
 bool TableStack::symbol_exists(const string &name) {
+//    std::cout << "Checking all scopes " << table_stack.size() << "\n";
     for (auto it = table_stack.rbegin(); it != table_stack.rend(); ++it) {
-        if ((*it)->symbol_exists(name))
+        SymbolTable *current = *it;
+        if (current->symbol_exists(name))
             return true;
     }
     return false;
 }
 
+bool TableStack::check_loop() {
+    for (auto it = table_stack.rbegin(); it != table_stack.rend(); ++it) {
+        SymbolTable *current = *it;
+        if (current->is_loop)
+            return true;
+    }
+    return false;
+}
 Symbol *TableStack::get_symbol(const string &name) {
     for (auto it = table_stack.begin(); it != table_stack.end(); ++it) {
         Symbol *symbol = (*it)->get_symbol(name);
@@ -76,22 +89,25 @@ void TableStack::add_function_symbol(const string &name, const string &type, int
 void TableStack::push_scope(bool is_loop, string return_type) {
     if (DEBUG)
         std::cout << "Pushing scope\n";
-    table_stack.push_back(new SymbolTable(offsets.back(), is_loop, return_type));
-    offsets.push_back(table_stack.back()->max_offset);
+    SymbolTable* new_scope = new SymbolTable(offsets.back(), is_loop, return_type);
+    this->table_stack.push_back(new_scope);
+//    std::cout << "max offset is: " << table_stack.back()->max_offset << "\n";
+    SymbolTable* current_scope = table_stack.back();
+    offsets.push_back(current_scope->max_offset);
 }
 
 SymbolTable *TableStack::current_scope() {
     return table_stack.back();
 }
 
-static string convert_to_upper_case(const string &str) {
+string convert_to_upper_case(const string &str) {
     if (str == "bool")
         return "BOOL";
     else if (str == "byte")
         return "BYTE";
     else if (str == "int")
         return "INT";
-    else if(str == "void")
+    else if (str == "void")
         return "VOID";
     else
         return "STRING";
@@ -104,6 +120,8 @@ void TableStack::pop_scope() {
     table_stack.pop_back();
     output::endScope();
     for (auto it = scope->symbols.begin(); it != scope->symbols.end(); ++it) {
+        auto offset = offsets.back();
+//        std::cout << "popping offset " << offset << "\n";
         offsets.pop_back();
         if ((*it)->is_function) {
             vector<string> converted_params;
@@ -116,6 +134,9 @@ void TableStack::pop_scope() {
             output::printID((*it)->name, (*it)->offset, convert_to_upper_case((*it)->type));
         }
     }
+    if(offsets.size() > 0)
+        offsets.pop_back();
+//    std::cout << "max offset is: " << table_stack.back()->max_offset << "\n";
     delete scope;
 
 
@@ -124,11 +145,27 @@ void TableStack::pop_scope() {
 void TableStack::print_scopes() {
     int i = 0;
     for (auto it = table_stack.begin(); it != table_stack.end(); ++it) {
-        std::cout << "Scope Number:" << i << " Return Type: " << *((*it)->return_type) << " Number of symbols:" << (*it)->symbols.size() << std::endl;
+        std::cout << "Scope Number:" << i << " Return Type: " << *((*it)->return_type) << " Number of symbols:"
+                  << (*it)->symbols.size() << std::endl;
         for (auto it2 = (*it)->symbols.begin(); it2 != (*it)->symbols.end(); ++it2) {
             std::cout << (*it2)->name << " " << (*it2)->type << " " << (*it2)->offset << std::endl;
         }
         i++;
     }
 
+}
+
+void TableStack::check_program() {
+    SymbolTable *main_scope = tables.table_stack.front();
+    if (main_scope->symbol_exists("main")) {
+        Symbol *main_symbol = main_scope->get_symbol("main");
+        if (main_symbol->type == "void") {
+            if (main_symbol->params.size() == 0) {
+                tables.pop_scope();
+                return;
+            }
+        }
+    }
+    output::errorMainMissing();
+    exit(0);
 }

@@ -1,0 +1,11 @@
+void main(){
+    auto a = 1;
+    auto g = a;
+    auto c = g;
+    c = 5b;
+    c = 5;
+    auto f = (byte) c;
+    f = 5b;
+    f = 5;
+    
+}

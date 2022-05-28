@@ -12,8 +12,10 @@ class Node {
 public:
     string value;
 
-    Node(const string value = "") : value(value) {};
-    Node(const Node &node): value(node.value){};
+    Node(const string value = "") : value(value) {
+    };
+    Node(const Node &node): value(node.value){
+    };
     virtual ~Node() = default;
 };
 
@@ -114,7 +116,7 @@ public:
 
 class ExpList : public Node {
 public:
-    vector<Exp> expressions;
+    vector<Exp*> expressions;
 
     ExpList(Node *exp);
 
@@ -148,7 +150,7 @@ public:
 
     Statement(Node *id, Exp *exp);
 
-    Statement(Exp *exp, const string name);
+    Statement( const string name, Exp *exp);
 
     Statement(Exp *exp, bool is_return=false);
 

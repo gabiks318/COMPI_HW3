@@ -1,0 +1,14 @@
+void main(){
+    auto a = 5;
+    auto c = 5b;
+    auto d = true;
+    auto e = false;
+    a = 6;
+    c = 6b;
+    d = false;
+    a = 5b;
+    a = (int) 5b;
+    a = (byte) 5b;
+    c = (byte) 10;
+    a = true;
+}

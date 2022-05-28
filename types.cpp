@@ -11,7 +11,7 @@ static bool check_types_compatible(string type1, string type2) {
     if (type1 == type2)
         return true;
 
-    if (type1 == "bool" || type2 == "bool" || type1 == "string" || type2 == "string")
+    if (type1 == "bool" || type2 == "bool" || type1 == "string" || type2 == "string" || type2 == "void")
         return false;
     return true;
 }
@@ -32,7 +32,7 @@ FormalDecl::FormalDecl(Type *type, Node *node) : Node(*node), type(type->type) {
 FormalsList::FormalsList(Node *node) : Node(), formals_list() {
     if (DEBUG)
         std::cout << "FormalsList " << std::endl;
-    formals_list.push_back(new FormalDecl(dynamic_cast<FormalDecl *>(node)));
+    formals_list.insert(formals_list.begin(), new FormalDecl(dynamic_cast<FormalDecl *>(node)));
 //    delete[] node;
 }
 
@@ -43,7 +43,7 @@ FormalsList::FormalsList(Node *node, FormalsList *formals_list) : Node(), formal
         FormalDecl *decl = new FormalDecl(*it);
         this->formals_list.push_back(decl);
     }
-    this->formals_list.push_back(dynamic_cast<FormalDecl *>(node));
+    this->formals_list.insert(this->formals_list.begin(), dynamic_cast<FormalDecl *>(node));
 //    delete[] formals_list;
 }
 
@@ -100,14 +100,12 @@ FuncDecl::FuncDecl(RetType *return_type, Node *id, Formals *params) {
 // Statement -> BREAK SC / CONTINUE SC
 Statement::Statement(Node *node) {
     if (node->value == "break") {
-        SymbolTable *scope = tables.current_scope();
-        if (!scope->is_loop) {
+        if (!tables.check_loop()) {
             output::errorUnexpectedBreak(yylineno);
             exit(0);
         }
     } else if (node->value == "continue") {
-        SymbolTable *scope = tables.current_scope();
-        if (!scope->is_loop) {
+        if (!tables.check_loop()) {
             output::errorUnexpectedContinue(yylineno);
             exit(0);
         }
@@ -121,11 +119,21 @@ Statement::Statement(Exp *exp, bool is_return) : Node() {
     if (DEBUG)
         std::cout << "Statement Expression is_return:" << is_return << std::endl;
     SymbolTable *scope = tables.current_scope();
-    string* return_type = scope->return_type;
+    string *return_type = scope->return_type;
 
     if (*return_type != "" && *return_type != exp->type) {
-        output::errorMismatch(yylineno);
-        exit(0);
+        if (*return_type != "int" || exp->type != "byte") {
+            output::errorMismatch(yylineno);
+            exit(0);
+        }
+
+    }
+    if (exp->is_var) {
+        Symbol *symbol = tables.get_symbol(exp->value);
+        if (symbol->is_function) {
+            output::errorUndef(yylineno, symbol->name);
+            exit(0);
+        }
     }
 }
 
@@ -144,15 +152,19 @@ Statement::Statement(Type *type, Node *id) : Node() {
 
 // Statement -> Type ID ASSIGN Exp SC or Statement -> AUTO ID ASSIGN Exp SC
 Statement::Statement(Type *type, Node *id, Exp *exp) : Node() {
-    if(DEBUG)
+    if (DEBUG)
         std::cout << "Statement -> Type ID ASSIGN Exp SC\n";
+
     if (tables.symbol_exists(id->value)) {
         output::errorDef(yylineno, id->value);
         exit(0);
     }
-
     if (type) {
         if (!check_types_compatible(type->type, exp->type)) {
+            output::errorMismatch(yylineno);
+            exit(0);
+        }
+        if (type->type == "byte" && exp->type == "int") {
             output::errorMismatch(yylineno);
             exit(0);
         }
@@ -162,6 +174,11 @@ Statement::Statement(Type *type, Node *id, Exp *exp) : Node() {
             output::errorMismatch(yylineno);
             exit(0);
         }
+        // For Bool expressions
+//        if (!check_types_compatible(type->type, exp->type)) {
+//            output::errorMismatch(yylineno);
+//            exit(0);
+//        }
         tables.add_symbol(id->value, exp->type, false);
     }
 
@@ -171,7 +188,7 @@ Statement::Statement(Type *type, Node *id, Exp *exp) : Node() {
 // Statement -> ID ASSIGN Exp SC
 Statement::Statement(Node *id, Exp *exp) : Node() {
     if (!tables.symbol_exists(id->value)) {
-        output::errorDef(yylineno, id->value);
+        output::errorUndef(yylineno, id->value);
         exit(0);
     }
     Symbol *symbol = tables.get_symbol(id->value);
@@ -179,7 +196,10 @@ Statement::Statement(Node *id, Exp *exp) : Node() {
         output::errorMismatch(yylineno);
         exit(0);
     }
-
+    if(symbol->type == "byte" && exp->type == "int"){
+        output::errorMismatch(yylineno);
+        exit(0);
+    }
     // TODO: do something with value/type?
 }
 
@@ -199,9 +219,10 @@ Statement::Statement(Call *call) : Node() {
     // TODO: do something with value/type?
 }
 
-Statement::Statement(Exp *exp,
-                     const string name) {
-    if (exp->type != "BOOL") {
+Statement::Statement(const string name, Exp *exp) {
+    if (DEBUG)
+        std::cout << "Exp (bool)\n";
+    if (exp->type != "bool") {
         output::errorMismatch(yylineno);
         exit(0);
     }
@@ -226,7 +247,13 @@ Exp::Exp(Node *terminal, string
 type) : Node(terminal->value), type(type) {
     if (DEBUG)
         std::cout << "Exp Node+string " << type << " " << terminal->value << std::endl;
-
+    if (type == "byte") {
+        int value = stoi(terminal->value);
+        if (value > 255) {
+            output::errorByteTooLarge(yylineno, terminal->value);
+            exit(0);
+        }
+    }
 }
 
 //Exp -> ID, Call
@@ -240,7 +267,6 @@ Exp::Exp(bool is_var, Node *terminal) : Node(), is_var(is_var) {
     Symbol *symbol = tables.get_symbol(terminal->value);
     value = terminal->value;
     type = symbol->type;
-
 }
 
 Exp::Exp(Node *terminal1, Node *terminal2,
@@ -273,67 +299,33 @@ Exp::Exp(Node *terminal1, Node *terminal2,
             output::errorMismatch(yylineno);
             exit(0);
         }
-//        t1 = exp1->value == TRUE;
-//        t2 = exp2->value == TRUE;
-//
-//        if (op == "or") {
-//            res = t1 || t2;
-//        } else if (op == "and") {
-//            res = t1 && t2;
-//        } else if (op == "not") {
-//            res = !t1;
-//        }
+
         this->type = "bool";
-//        this->value = res ? TRUE : FALSE;
     } else if (type == "int") {
+
+        if ((exp1->type != "int" && exp1->type != "byte") || (exp1->type != "int" && exp1->type != "byte")) {
+            output::errorMismatch(yylineno);
+            exit(0);
+        }
 
         if (exp1->type == "int" || exp2->type == "int") {
             this->type = "int";
         } else {
             this->type = "byte";
         }
-        int t1, t2, res;
-
-//        t1 = stoi(exp1->value);
-//        t2 = stoi(exp2->value);
-
-//        if (op == "+") {
-//            res = t1 + t2;
-//        } else if (op == "-") {
-//            res = t1 - t2;
-//        } else if (op == "*") {
-//            res = t1 * t2;
-//        } else if (op == "/") {
-//            res = t1 / t2;
-//        }
-//        this->value = to_string(res);
+        if (DEBUG)
+            std::cout << "op return type is " << this->type << "\n";
 
     } else if (type == "relop") {
         if (!check_types_compatible(exp1->type, exp2->type)) {
             output::errorMismatch(yylineno);
             exit(0);
         }
-//        int t1, t2;
-//        bool res;
-//        std::cout << "t1 value: " << exp1->value << " t2 value: " << exp2->value << std::endl;
-//        t1 = stoi(exp1->value);
-//        t2 = stoi(exp2->value);
-
-//        if (op == "<=") {
-//            res = t1 <= t2;
-//        } else if (op == "==") {
-//            res = t1 == t2;
-//        } else if (op == ">=") {
-//            res = t1 >= t2;
-//        } else if (op == "!=") {
-//            res = t1 != t2;
-//        } else if (op == ">") {
-//            res = t1 > t2;
-//        } else if (op == "<") {
-//            res = t1 < t2;
-//        }
+        if ((exp1->type != "int" && exp1->type != "byte") || (exp1->type != "int" && exp1->type != "byte")) {
+            output::errorMismatch(yylineno);
+            exit(0);
+        }
         this->type = "bool";
-//        this->value = res ? TRUE : FALSE;
     }
 }
 
@@ -357,9 +349,17 @@ Exp::Exp(Node *exp, Node *type) {
     ExpList::ExpList(Node * exp) : expressions(1, *(dynamic_cast<Exp *>(exp)))
     {}
 
-// ExpList -> ExpList, Exp
-ExpList::ExpList(Node *exp_list, Node *exp) : expressions((dynamic_cast<ExpList *>(exp_list))->expressions) {
-    expressions.push_back(*(dynamic_cast<Exp *>(exp)));
+// ExpList -> Exp, ExpList
+ExpList::ExpList(Node *exp_list, Node *exp) : Node(), expressions() {
+    if (DEBUG)
+        std::cout << "ExpList -> Exp,ExpList" << "\n";
+    expressions.push_back(dynamic_cast<Exp *>(exp));
+    vector<Exp *> expressions_list = (dynamic_cast<ExpList *>(exp_list))->expressions;
+    for (int i = 0; i < expressions_list.size(); ++i) {
+        expressions.push_back(new Exp(expressions_list[i]));
+
+    }
+
 //        delete[] exp;
 //        delete[] exp_list;
 }
@@ -384,7 +384,11 @@ Call::Call(Node *terminal) : Node() {
     }
 
     if (symbol->params.size() > 0) {
-        output::errorPrototypeMismatch(yylineno, name, symbol->params);
+        vector<string> converted_params;
+        for (int i = 0; i < symbol->params.size(); ++i) {
+            converted_params.push_back(convert_to_upper_case(symbol->params[i]));
+        }
+        output::errorPrototypeMismatch(yylineno, name, converted_params);
         exit(0);
     }
 
@@ -398,31 +402,41 @@ Call::Call(Node *terminal, Node *exp_list) : Node() {
         std::cout << "Call " << terminal->value << std::endl;
     ExpList *expressions_list = dynamic_cast<ExpList *>(exp_list);
     string name = terminal->value;
-
+//    std::cout << "meir";
     if (!tables.symbol_exists(name)) {
-
         output::errorUndefFunc(yylineno, name);
         exit(0);
     }
-
+//    std::cout << "meir1";
     Symbol *symbol = tables.get_symbol(name);
     if (!symbol->is_function) {
         output::errorUndefFunc(yylineno, name);
         exit(0);
     }
 
-
+//    std::cout << "meir2";
     if (symbol->params.size() != expressions_list->expressions.size()) {
-        output::errorPrototypeMismatch(yylineno, name, symbol->params);
+        vector<string> converted_params;
+        for (int i = 0; i < symbol->params.size(); ++i) {
+            converted_params.push_back(convert_to_upper_case(symbol->params[i]));
+        }
+        output::errorPrototypeMismatch(yylineno, name, converted_params);
         exit(0);
     }
+//    std::cout << "meir3";
     for (int i = 0; i < symbol->params.size(); i++) {
-        if (symbol->params[i] != expressions_list->expressions[i].type) {
-            output::errorPrototypeMismatch(yylineno, name, symbol->params);
-            exit(0);
+        if (symbol->params[i] != expressions_list->expressions[i]->type) {
+            if (symbol->params[i] != "int" || expressions_list->expressions[i]->type != "byte") {
+                vector<string> converted_params = vector<string>();
+                for (int j = 0; j < symbol->params.size(); ++j) {
+                    converted_params.push_back(convert_to_upper_case(symbol->params[j]));
+                }
+                output::errorPrototypeMismatch(yylineno, name, converted_params);
+                exit(0);
+            }
         }
     }
-
+//    std::cout << "meir4";
     type = symbol->type;
     value = symbol->name;
 }

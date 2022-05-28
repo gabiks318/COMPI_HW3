@@ -9,6 +9,9 @@
 using std::string;
 using std::vector;
 
+
+string convert_to_upper_case(const string &str);
+
 class Symbol {
 public:
     string name;
@@ -73,15 +76,21 @@ class TableStack {
 
     bool symbol_exists(const string &name);
 
+    bool check_loop();
+
     Symbol *get_symbol(const string &name);
 
     void insert_symbol(SymbolTable &table, Symbol &symbol);
 
     void print_scopes();
 
+    void check_program();
     ~TableStack(){
-        for(auto it = table_stack.begin(); it != table_stack.end(); it++)
-            delete (*it);
+        for(auto it = table_stack.begin(); it != table_stack.end(); it++){
+            SymbolTable* current = *it;
+            delete current;
+        }
+
     }
 };
 

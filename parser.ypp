@@ -47,12 +47,12 @@
 
 
 %%
-Program: Funcs                                                      {$$ = new Program(); tables.pop_scope();}
+Program: Funcs                                                      {$$ = new Program();}
 
 Funcs: /*epsilon*/                                                  {}
        | FuncDecl Funcs                                             {}
 
-FuncDecl: RetType ID LPAREN Formals RPAREN LBRACE {$$ = new FuncDecl(dynamic_cast<RetType*>($1), $2, dynamic_cast<Formals*>($4));} Statements RBRACE {tables.pop_scope();}
+FuncDecl: RetType ID LPAREN Formals {$$ = new FuncDecl(dynamic_cast<RetType*>($1), $2, dynamic_cast<Formals*>($4));} RPAREN LBRACE  Statements RBRACE {tables.pop_scope();}
 
 RetType: Type                                                       {$$ = new RetType(dynamic_cast<Type*>($1)->type);}
          | VOID                                                     {$$ = new RetType("void");}
@@ -70,15 +70,15 @@ Statements: Statement                                               {$$ = new St
 
 Statement: LBRACE {tables.push_scope();} Statements {tables.pop_scope();} RBRACE                           {}
            | Type ID SC                                             {$$ = new Statement(dynamic_cast<Type*>($1), $2);}
-           | Type ID ASSIGN Exp SC                                  {$$ = new Statement(dynamic_cast<Type*>($1), $2), dynamic_cast<Exp*>($3);}
+           | Type ID ASSIGN Exp SC                                  {$$ = new Statement(dynamic_cast<Type*>($1), $2, dynamic_cast<Exp*>($4));}
            | AUTO ID ASSIGN Exp SC                                  {$$ = new Statement(nullptr, $2, dynamic_cast<Exp*>($4));}
            | ID ASSIGN Exp SC                                       {$$ = new Statement($1, dynamic_cast<Exp*>($3));}
            | Call SC                                                {$$ = new Statement(dynamic_cast<Call*>($1));}
            | RETURN SC                                              {$$ = new Statement(new Exp(), true);}
            | RETURN Exp SC                                          {$$ = new Statement(dynamic_cast<Exp*>($2), true);}
-           | IF LPAREN Exp RPAREN OS Statement                      {$$ = new Statement(dynamic_cast<Exp*>($3));tables.pop_scope();}
-           | IF LPAREN Exp RPAREN OS  Statement  ELSE {tables.pop_scope();} OS  Statement   {$$ = new Statement(dynamic_cast<Exp*>($3)); tables.pop_scope();}
-           | WHILE LPAREN Exp RPAREN  {tables.push_scope(true);} Statement                 {$$ = new Statement(dynamic_cast<Exp*>($3)); tables.pop_scope();}
+           | IF LPAREN CheckBool RPAREN OS Statement                      {$$ = new Statement("IF", dynamic_cast<Exp*>($3));tables.pop_scope();}
+           | IF LPAREN CheckBool RPAREN OS Statement  ELSE {tables.pop_scope();} OS  Statement   {$$ = new Statement("IF ELSE", dynamic_cast<Exp*>($3)); tables.pop_scope();}
+           | WHILE LPAREN CheckBool RPAREN  {tables.push_scope(true);} Statement                 {$$ = new Statement("WHILE", dynamic_cast<Exp*>($3)); tables.pop_scope();}
            | BREAK SC                                               {$$ = new Statement($1);}
            | CONTINUE SC                                            {$$ = new Statement($1);}
 
@@ -86,7 +86,7 @@ Call: ID LPAREN ExpList RPAREN                                      {$$ = new Ca
       | ID LPAREN RPAREN                                            {$$ = new Call($1);}
 
 ExpList: Exp                                                        {$$ = new ExpList($1);}
-         | Exp COMMA ExpList                                        {$$ = new ExpList($2, $1);}
+         | Exp COMMA ExpList                                        {$$ = new ExpList($3, $1);}
 
 Type: INT                                                           {$$ = new Type("int");}
       | BYTE                                                        {$$ = new Type("byte");}
@@ -109,11 +109,14 @@ Exp: LPAREN Exp RPAREN                                              {$$ = new Ex
      | LPAREN Type RPAREN Exp                                       {$$ = new Exp($4, $2);}
 
 OS:                                                                 {tables.push_scope();}
+CheckBool: Exp                                                      {check_bool($1);}
 %%
 
 TableStack tables = TableStack();
 int main(){
-        return yyparse();
+        int res = yyparse();
+        tables.check_program();
+        return res;
 }
 
 int yyerror(const char * message){

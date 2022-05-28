@@ -1,0 +1,24 @@
+int foo(){
+    return 5;
+}
+
+byte g(){
+    return 5b;
+}
+
+bool fun(){ return true;}
+
+void main(){
+    auto a = foo();
+    auto c = g();
+    auto d = fun();
+    auto e = false;
+    a = foo();
+    c = g();
+    d = false;
+    a = g();
+    a = (int) g();
+    a = (byte) g();
+    c = (byte) foo();
+    a = d;
+}
