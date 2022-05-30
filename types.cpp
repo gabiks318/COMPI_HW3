@@ -346,8 +346,13 @@ Exp::Exp(Node *exp, Node *type) {
 //*******************EXPLIST************************
 
 // ExpList -> Exp
-    ExpList::ExpList(Node * exp) : expressions(1, *(dynamic_cast<Exp *>(exp)))
-    {}
+ExpList::ExpList(Node *exp) : Node(), expressions() {
+    if (DEBUG)
+        std::cout << "ExpList -> Exp: " << exp->value << "\n";
+    Exp *expression = dynamic_cast<Exp *>(exp);
+    expressions.push_back(expression);
+//    delete[] exp;
+}
 
 // ExpList -> Exp, ExpList
 ExpList::ExpList(Node *exp_list, Node *exp) : Node(), expressions() {
@@ -439,5 +444,17 @@ Call::Call(Node *terminal, Node *exp_list) : Node() {
 //    std::cout << "meir4";
     type = symbol->type;
     value = symbol->name;
+}
+
+Program::Program() {
+
+}
+
+void check_bool(Node *node) {
+    Exp *exp = dynamic_cast<Exp *>(node);
+    if (exp->type != "bool") {
+        output::errorMismatch(yylineno);
+        exit(0);
+    }
 }
 
