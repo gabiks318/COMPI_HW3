@@ -1,0 +1,37 @@
+---end scope---
+num2 INT 1
+asd BOOL 2
+---end scope---
+num3 INT 2
+num4 INT 3
+num5 INT 4
+---end scope---
+---end scope---
+a INT -1
+v BYTE -2
+d BOOL -3
+num1 INT 0
+num2 INT 1
+num4 INT 2
+---end scope---
+num2 INT 1
+asd BOOL 2
+---end scope---
+num3 INT 2
+num4 INT 3
+num5 INT 4
+---end scope---
+---end scope---
+a INT -1
+v BYTE -2
+d BOOL -3
+num1 INT 0
+num2 INT 1
+num4 INT 2
+---end scope---
+---end scope---
+print (STRING)->VOID 0
+printi (INT)->VOID 0
+foo (INT,BYTE,BOOL)->VOID 0
+foo2 (INT,BYTE,BOOL)->VOID 0
+main ()->VOID 0
