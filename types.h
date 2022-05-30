@@ -19,8 +19,7 @@ public:
     virtual ~Node() = default;
 };
 
-class Program : public Node {
-};
+#define YYSTYPE Node*
 
 class Funcs : public Node {
     virtual ~Funcs() = default;
@@ -167,5 +166,14 @@ public:
 
     virtual ~Statements() = default;
 };
-#define YYSTYPE Node*
+
+class Program : public Node {
+public:
+    Program();
+
+    virtual ~Program() = default;
+};
+
+void check_bool(Node* node);
+
 #endif
