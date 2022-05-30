@@ -59,7 +59,8 @@ public:
 };
 
 class TableStack {
-    vector<SymbolTable> table_stack;
+public:
+    vector<SymbolTable*> table_stack;
     vector<int> offsets;
 
     TableStack();
